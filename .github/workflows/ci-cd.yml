@@ -33,9 +33,10 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: 📦 Install dependencies
-        run: npm ci
+        run: npm ci || npm install
 
       - name: 🧪 Run Automated Game Engine Unit Tests (rules.test.ts)
         run: |
@@ -73,18 +74,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🛠️ Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: 🛠️ Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
-      - name: 🐘 Cache Gradle packages & wrapper
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: 🔑 Make Gradle Wrapper Executable
         run: |
@@ -149,8 +144,22 @@ jobs:
 
       - name: 🍏 Select Xcode Version
         run: |
-          sudo xcode-select -switch /Applications/Xcode_15.4.app || sudo xcode-select -switch /Applications/Xcode.app
+          if [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -switch /Applications/Xcode_16.0.app
+          elif [ -d "/Applications/Xcode_15.4.app" ]; then
+            sudo xcode-select -switch /Applications/Xcode_15.4.app
+          elif [ -d "/Applications/Xcode.app" ]; then
+            sudo xcode-select -switch /Applications/Xcode.app
+          fi
           xcodebuild -version
+
+      - name: 🔍 Validate iOS Info.plist & Bonjour Configuration
+        working-directory: ios
+        run: |
+          echo "Verifying NSLocalNetworkUsageDescription and Bonjour services..."
+          grep -q "NSLocalNetworkUsageDescription" MafiaLAN/Info.plist
+          grep -q "_mafia-lan._tcp" MafiaLAN/Info.plist
+          echo "Bonjour network configuration verified."
 
       - name: 📦 Resolve Swift Package Dependencies
         working-directory: ios
