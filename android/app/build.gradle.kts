@@ -43,6 +43,33 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Ktor/Netty ships many jars that each carry their own META-INF manifests,
+    // licenses and service-index files. Without this the resource merge step
+    // fails with DuplicateRelativeFileException (e.g. META-INF/INDEX.LIST).
+    packaging {
+        resources {
+            pickFirsts += setOf(
+                "META-INF/INDEX.LIST",
+                "META-INF/io.netty.versions.properties",
+                "META-INF/*.kotlin_module",
+                "META-INF/services/io.ktor.*",
+                "META-INF/services/java.nio.channels.spi.*"
+            )
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/LICENSE.md",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/NOTICE.md",
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1",
+                "**/module-info.class"
+            )
+        }
+    }
 }
 
 dependencies {

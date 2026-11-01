@@ -47,6 +47,9 @@ jobs:
         run: npx tsc --noEmit
 
       - name: ⚡ Compile Vite Production Web Application
+        env:
+          # GitHub Pages serves project sites under /<repo>/, so asset URLs need that base.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
 
       - name: 📤 Upload Web Production Artifact
@@ -55,6 +58,58 @@ jobs:
           name: mafia-lan-web-production
           path: dist/
           retention-days: 14
+
+      - name: 🧾 Verify PWA Shell (manifest + service worker)
+        run: |
+          set -e
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
+          test -f dist/icon-192.png
+          test -f dist/icon-512.png
+          grep -q 'manifest.webmanifest' dist/index.html
+          grep -q "/${{ github.event.repository.name }}/assets/" dist/index.html
+          echo "PWA shell present and base path /${{ github.event.repository.name }}/ baked into dist/index.html"
+
+  # =========================================================================
+  # 1b. DEPLOY: Publish the PWA to GitHub Pages (main branch / manual runs)
+  # =========================================================================
+  deploy-web:
+    name: 🚀 Deploy PWA to GitHub Pages
+    needs: build-web
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+
+    steps:
+      - name: 📥 Download Web Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mafia-lan-web-production
+          path: dist
+
+      - name: 🗂️ Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 📦 Package Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: 🌍 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   # =========================================================================
   # 2. ANDROID: Native Standalone APK Compilation
@@ -223,7 +278,7 @@ jobs:
   # =========================================================================
   build-summary:
     name: 📊 CI/CD Multiplatform Summary
-    needs: [build-web, build-android, build-ios]
+    needs: [build-web, deploy-web, build-android, build-ios]
     runs-on: ubuntu-latest
     if: always()
 
@@ -236,6 +291,7 @@ jobs:
           | Target Platform | Status | Artifact Output |
           |---|---|---|
           | 🌐 **Web App** | ${{ needs.build-web.result == 'success' && '✅ Succeeded' || '❌ Failed' }} | `mafia-lan-web-production` (`dist/`) |
+          | 🚀 **Web PWA (Pages)** | ${{ needs.deploy-web.result == 'success' && '✅ Live' || '⏭️ Skipped / ❌ Failed' }} | https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/ |
           | 🤖 **Android APK** | ${{ needs.build-android.result == 'success' && '✅ Succeeded' || '❌ Failed' }} | `mafia-lan-android-debug-apk` (`.apk`) |
           | 🍎 **iOS App** | ${{ needs.build-ios.result == 'success' && '✅ Succeeded' || '❌ Failed' }} | `mafia-lan-ios-simulator-app` (`.zip`) |
 
