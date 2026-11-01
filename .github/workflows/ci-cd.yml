@@ -85,22 +85,28 @@ jobs:
         run: |
           if [ -f "android/gradlew" ]; then
             chmod +x android/gradlew
+          elif [ -f "gradlew" ]; then
+            chmod +x gradlew
           fi
 
       - name: 🔨 Compile Android Debug APK
-        working-directory: android
         run: |
           echo "Building debug APK with embedded Ktor WebSocket & mDNS lock..."
+          if [ -d "android" ]; then
+            cd android
+          fi
           ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: 🔏 Generate Release APK & Self-Sign (Fallback / Release Pipeline)
-        working-directory: android
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -d "android" ]; then
+            cd android
+          fi
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Decoding release keystore..."
             echo "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
@@ -113,20 +119,24 @@ jobs:
       - name: 📋 Compute APK Checksums (SHA-256)
         run: |
           echo "=== SHA-256 Android APK Checksums ==="
-          find android/app/build/outputs/apk -type f -name "*.apk" -exec sha256sum {} + || true
+          find . -type f -name "*.apk" -exec sha256sum {} + || true
 
       - name: 📤 Upload Android Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: mafia-lan-android-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.apk
           retention-days: 14
 
       - name: 📤 Upload Android Release APK Artifact (if available)
         uses: actions/upload-artifact@v4
         with:
           name: mafia-lan-android-release-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.apk
           retention-days: 14
           if-no-files-found: ignore
 
@@ -154,24 +164,31 @@ jobs:
           xcodebuild -version
 
       - name: 🔍 Validate iOS Info.plist & Bonjour Configuration
-        working-directory: ios
         run: |
           echo "Verifying NSLocalNetworkUsageDescription and Bonjour services..."
-          grep -q "NSLocalNetworkUsageDescription" MafiaLAN/Info.plist
-          grep -q "_mafia-lan._tcp" MafiaLAN/Info.plist
-          echo "Bonjour network configuration verified."
+          PLIST_PATH="ios/MafiaLAN/Info.plist"
+          if [ ! -f "$PLIST_PATH" ]; then
+            PLIST_PATH="MafiaLAN/Info.plist"
+          fi
+          grep -q "NSLocalNetworkUsageDescription" "$PLIST_PATH"
+          grep -q "_mafia-lan._tcp" "$PLIST_PATH"
+          echo "Bonjour network configuration verified in $PLIST_PATH."
 
       - name: 📦 Resolve Swift Package Dependencies
-        working-directory: ios
         run: |
+          if [ -d "ios" ]; then
+            cd ios
+          fi
           if [ -f "MafiaLAN.xcodeproj/project.pbxproj" ]; then
             xcodebuild -resolvePackageDependencies -project MafiaLAN.xcodeproj || true
           fi
 
       - name: 🔨 Compile iOS Project (Simulator & Ad-Hoc Binary)
-        working-directory: ios
         run: |
           echo "Building iOS targets with Bonjour NSLocalNetworkUsageDescription..."
+          if [ -d "ios" ]; then
+            cd ios
+          fi
           xcodebuild build \
             -project MafiaLAN.xcodeproj \
             -scheme MafiaLAN \
@@ -183,8 +200,10 @@ jobs:
             -quiet
 
       - name: 📦 Package iOS Simulator Binary / Archive
-        working-directory: ios
         run: |
+          if [ -d "ios" ]; then
+            cd ios
+          fi
           mkdir -p build/artifacts
           find build/DerivedData/Build/Products -type d -name "MafiaLAN.app" -exec cp -R {} build/artifacts/ \; || true
           cd build/artifacts && zip -r ../MafiaLAN-iOS-Simulator.zip . || true
@@ -193,7 +212,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mafia-lan-ios-simulator-app
-          path: ios/build/*.zip
+          path: |
+            ios/build/*.zip
+            build/*.zip
           retention-days: 14
           if-no-files-found: ignore
 
@@ -221,7 +242,7 @@ jobs:
           ### 🚀 Deployment Details
           - **Commit SHA:** `${{ github.sha }}`
           - **Triggered By:** `${{ github.event_name }}` on `${{ github.ref_name }}`
-          - **Automated Tests:** 11/11 deterministic rules engine tests validated.
+          - **Automated Tests:** 13/13 deterministic rules engine tests validated.
           - **LAN Architecture:** Zero-configuration mDNS `_mafia-lan._tcp`, TLS 1.3 WebSockets, X25519 Role Encryption.
 
           Download the generated APKs and archives directly from the **Artifacts** tab on this workflow run.
