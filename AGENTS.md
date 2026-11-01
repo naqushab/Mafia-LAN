@@ -172,7 +172,7 @@ The repository maintains a multiplatform matrix at `.github/workflows/ci-cd.yml`
 - **Web App:** Node 20, runs `npm test` (35 tests), `tsc --noEmit`, compiles `dist/` production web bundle, and verifies the PWA manifest/service worker shell.
 - **Web PWA Deploy:** publishes `dist/` to GitHub Pages on `main`/`master` or manual dispatch.
 - **Android Standalone APK:** Ubuntu + Temurin JDK 17 + Android SDK, executes `./gradlew assembleDebug`, computes SHA-256 checksums, and uploads `mafia-lan-android-debug-apk`.
-- **iOS Native:** macOS 14 (Apple Silicon) + Xcode 16, validates `Info.plist` Bonjour keys, builds iOS Simulator/Ad-Hoc archive via `xcodebuild`, and uploads `mafia-lan-ios-simulator-app`.
+- **iOS Native:** macOS 15 (Apple Silicon) + Xcode 16, validates `Info.plist` Bonjour keys, builds iOS Simulator/Ad-Hoc archive via `xcodebuild`, and uploads `mafia-lan-ios-simulator-app`.
 - **GitHub Release:** downloads the APK(s) and iOS zip, writes `SHA256SUMS.txt`, and publishes/updates the rolling `continuous` prerelease (or a versioned release on `v*` tags).
 - **CI/CD Summary:** Aggregates multiplatform build outcomes directly in `$GITHUB_STEP_SUMMARY`.
 

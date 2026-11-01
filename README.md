@@ -391,7 +391,7 @@ Mafia LAN includes an automated multiplatform CI/CD pipeline configured at `.git
        │    ├── Compute SHA-256 APK binary checksums
        │    └── Upload standalone app-debug.apk artifact
        │
-       ├──► Job 3: iOS Native (macOS 14 Apple Silicon + Xcode 16)
+       ├──► Job 3: iOS Native (macOS 15 Apple Silicon + Xcode 16)
        │    ├── Verify Bonjour NSLocalNetworkUsageDescription Info.plist
        │    ├── Compile simulator & ad-hoc binary via xcodebuild
        │    └── Package & upload MafiaLAN-iOS-Simulator.zip artifact

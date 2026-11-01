@@ -173,7 +173,7 @@ jobs:
   # =========================================================================
   build-ios:
     name: 🍎 iOS Native App (Xcode)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
 
     steps:
@@ -595,7 +595,7 @@ ${sampleSwiftApp}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-400 space-y-1 font-mono">
-                  <div>• Runner: <span className="text-slate-300">macos-14 (M2 Apple Silicon)</span></div>
+                  <div>• Runner: <span className="text-slate-300">macos-15 (Apple Silicon)</span></div>
                   <div>• Tool: <span className="text-slate-300">Xcode 15.4 / 16.0</span></div>
                   <div>• Task: <span className="text-indigo-400">xcodebuild (Ad-Hoc/Sim)</span></div>
                   <div>• Network: <span className="text-slate-300">Bonjour _mafia-lan._tcp</span></div>
