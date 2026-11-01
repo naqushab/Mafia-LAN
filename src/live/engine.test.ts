@@ -316,6 +316,51 @@ test('phase timers advance the game without any player input', () => {
   assert.equal(engine.phase, 'voting');
 });
 
+test('a full game can be played from role reveal to a winner', () => {
+  const engine = makeGame(['villager', 'mafia', 'detective', 'doctor', 'villager']);
+  everyoneReady(engine);
+
+  const alive = () => engine.players.filter(p => p.isAlive);
+  const mafia = engine.players.find(p => p.role === 'mafia')!;
+  const doctor = engine.players.find(p => p.role === 'doctor')!;
+  const detective = engine.players.find(p => p.role === 'detective')!;
+
+  for (let step = 0; step < 30 && engine.phase !== 'game_over'; step++) {
+    switch (engine.phase) {
+      case 'night': {
+        const victim = alive().find(p => p.faction !== 'mafia')!;
+        engine.submitNightAction(mafia.id, victim.id, 0);
+        engine.submitNightAction(doctor.id, doctor.id, 0);
+        engine.submitNightAction(detective.id, mafia.id, 0);
+        break;
+      }
+      case 'dawn':
+      case 'verdict':
+        engine.forceAdvance(0);
+        break;
+      case 'day':
+        engine.startVoting(0);
+        break;
+      case 'voting':
+        for (const voter of alive()) {
+          engine.submitVote(voter.id, voter.id === mafia.id ? 'abstain' : mafia.id, 0);
+        }
+        break;
+      case 'trial':
+        for (const voter of alive()) engine.submitVote(voter.id, 'guilty', 0);
+        break;
+      default:
+        break;
+    }
+  }
+
+  assert.equal(engine.phase, 'game_over');
+  assert.equal(engine.winner, 'town');
+  assert.ok(engine.winnerReason.length > 0);
+  // Nobody is left holding a fake role once the table is revealed.
+  assert.ok(engine.publicState().players.every(p => p.role !== undefined));
+});
+
 test('restart clears the board and returns everyone to the lobby', () => {
   const engine = makeGame(['villager', 'mafia', 'detective', 'doctor']);
   everyoneReady(engine);

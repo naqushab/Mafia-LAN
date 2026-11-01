@@ -31,7 +31,7 @@
 │   │   └── rules.test.ts          # Automated unit test suite (13 tests)
 │   ├── live/
 │   │   ├── engine.ts              # Authoritative host engine for real P2P games
-│   │   ├── engine.test.ts         # Live state-machine tests (18 tests)
+│   │   ├── engine.test.ts         # Live state-machine tests (19 tests)
 │   │   ├── protocol.ts            # Wire messages, timings, SDP invite/answer tokens
 │   │   ├── protocol.test.ts       # Signaling codec tests (4 tests)
 │   │   ├── session.ts             # Host/guest sessions over the engine + transport
@@ -169,7 +169,7 @@ npm run build
 
 ### 6.1 GitHub Actions CI/CD Pipeline
 The repository maintains a multiplatform matrix at `.github/workflows/ci-cd.yml` which executes automatically on `push` and `pull_request` to `main` and `master`:
-- **Web App:** Node 20, runs `npm test` (35 tests), `tsc --noEmit`, compiles `dist/` production web bundle, and verifies the PWA manifest/service worker shell.
+- **Web App:** Node 20, runs `npm test` (36 tests), `tsc --noEmit`, compiles `dist/` production web bundle, and verifies the PWA manifest/service worker shell.
 - **Web PWA Deploy:** publishes `dist/` to GitHub Pages on `main`/`master` or manual dispatch.
 - **Android Standalone APK:** Ubuntu + Temurin JDK 17 + Android SDK, executes `./gradlew assembleDebug`, computes SHA-256 checksums, and uploads `mafia-lan-android-debug-apk`.
 - **iOS Native:** macOS 15 (Apple Silicon) + Xcode 16, validates `Info.plist` Bonjour keys, builds iOS Simulator/Ad-Hoc archive via `xcodebuild`, and uploads `mafia-lan-ios-simulator-app`.

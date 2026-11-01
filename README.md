@@ -5,7 +5,7 @@
 [![Discovery](https://img.shields.io/badge/Protocol-mDNS%20%2F%20Bonjour%20%28_mafia--lan._tcp%29-indigo.svg)](#local-network-architecture)
 [![Security](https://img.shields.io/badge/Security-Zero--Knowledge%20X25519%20%2B%20AES--256--GCM-emerald.svg)](#zero-knowledge-role-secrecy--anti-cheat)
 [![CI/CD Auto-Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Web%20%2B%20APK%20%2B%20iOS)-success.svg)](#45-github-actions-cicd-autobuild-web-android-apk-ios)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-35%2F35%20Passing-brightgreen.svg)](#testing--quality-assurance)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-36%2F36%20Passing-brightgreen.svg)](#testing--quality-assurance)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](#license)
 
 > A production-grade mobile social deduction client and architectural specification for Android, iOS, and Web. Engineered for zero-configuration, encrypted peer-to-peer multiplayer sessions over local Wi-Fi router or peer hotspot networks without requiring cloud relays or internet access.
@@ -382,7 +382,7 @@ Mafia LAN includes an automated multiplatform CI/CD pipeline configured at `.git
 [git commit / push]
        │
        ├──► Job 1: Web App (Ubuntu + Node 20)
-       │    ├── Run 35 deterministic rules, live engine & signaling tests
+       │    ├── Run 36 deterministic rules, live engine & signaling tests
        │    ├── Type-check via tsc --noEmit
        │    └── Compile Vite production bundle -> dist/ artifact
        │
@@ -478,9 +478,9 @@ The codebase decouples pure game rules from UI rendering, enabling high-speed un
 npm test
 ```
 
-#### Test Suite Matrix (35/35 Passing)
+#### Test Suite Matrix (36/36 Passing)
 - **Rules engine (13):** role assignment and faction alignment, night kills, Doctor protection, Detective/Godfather immunity, multi-attacker Doctor shielding, mafia/town/jester win conditions, nomination majority, gallows tie → pardon, Wi-Fi reconnect reconciliation, 4–16 player scaling, and the classic role randomizer.
-- **Live P2P engine (18):** lobby gates, role reveal → night, shared syndicate hit with Godfather override, private investigations, nomination → trial → verdict → nightfall, pardons, jester victory, hidden-role projection, timer-driven phases, verdict visibility, and restart.
+- **Live P2P engine (19):** lobby gates, role reveal → night, shared syndicate hit with Godfather override, private investigations, nomination → trial → verdict → nightfall, pardons, jester victory, hidden-role projection, timer-driven phases, verdict visibility, and a complete game played from role reveal to winner, plus restart.
 - **Signaling codecs (4):** offer/answer round-trips, `#join=`/`#answer=` share-link parsing, and rejection of malformed invite codes.
 
 ---
