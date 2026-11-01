@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #090a0f;
+    color: #e2e8f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Card 3D Perspective */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Haptic Vibration Simulation Animation */
+@keyframes haptic-rumble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-2px, 1.5px) rotate(-0.3deg); }
+  30% { transform: translate(2px, -1.5px) rotate(0.3deg); }
+  45% { transform: translate(-1.5px, -1px) rotate(-0.2deg); }
+  60% { transform: translate(1.5px, 1px) rotate(0.2deg); }
+  75% { transform: translate(-1px, 0.5px) rotate(-0.1deg); }
+  90% { transform: translate(0.5px, -0.5px) rotate(0.1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.animate-haptic-rumble {
+  animation: haptic-rumble 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+

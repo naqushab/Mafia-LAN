@@ -1,0 +1,6 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.MafiaLAN" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#07080C</item>
+        <item name="android:navigationBarColor">#07080C</item>
+    </style>
+</resources>

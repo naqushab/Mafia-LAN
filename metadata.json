@@ -1,0 +1,6 @@
+{
+  "name": "Mafia LAN - Play Mafia with friends over Wifi/LAN",
+  "description": "Zero-config cross-platform local network social deduction game. Play Mafia with friends over Wifi/LAN without internet on Android, iOS, and Web.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
