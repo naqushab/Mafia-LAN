@@ -19,6 +19,7 @@ import {
   Vibrate,
 } from 'lucide-react';
 import { GameSimulator } from './components/GameSimulator';
+import { LiveGame } from './components/LiveGame';
 import { SpecificationView } from './components/SpecificationView';
 import { ApkBuildCenter } from './components/ApkBuildCenter';
 import { RolePortrait } from './components/RolePortraits';
@@ -26,10 +27,10 @@ import { UserSettingsModal } from './components/UserSettingsModal';
 import { ROLE_DEFINITIONS } from './game/rules';
 import { sounds } from './services/soundEffects';
 
-type NavTab = 'simulator' | 'specification' | 'rulebook' | 'apk';
+type NavTab = 'live' | 'simulator' | 'specification' | 'rulebook' | 'apk';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<NavTab>('simulator');
+  const [activeTab, setActiveTab] = useState<NavTab>('live');
   const [isMuted, setIsMuted] = useState(sounds.getIsMuted());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -65,6 +66,18 @@ export default function App() {
 
         {/* Primary View Switcher Navigation */}
         <nav className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('live')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'live'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <Wifi className="w-3.5 h-3.5" />
+            <span>Play Live</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('simulator')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
@@ -147,6 +160,10 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col items-center justify-start py-6 sm:py-8 px-4">
+        {/* Keep the live session mounted so switching tabs never drops a table. */}
+        <div className={activeTab === 'live' ? 'w-full' : 'hidden'}>
+          <LiveGame />
+        </div>
         {activeTab === 'simulator' && <GameSimulator />}
         {activeTab === 'specification' && <SpecificationView />}
         {activeTab === 'apk' && <ApkBuildCenter />}

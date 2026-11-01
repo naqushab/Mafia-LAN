@@ -6,11 +6,11 @@
 
 ## 1. Project Philosophy & Architecture Overview
 
-**Mafia LAN** is a zero-configuration cross-platform local network social deduction game for Android, iOS, and Web. It is built as both a **working, high-fidelity interactive simulation client** and an **engineering architectural specification** for native mobile developers.
+**Mafia LAN** is a zero-configuration cross-platform local network social deduction game for Android, iOS, and Web. It is a **fully playable P2P browser/PWA client**, a **high-fidelity interactive simulator/specification**, and an **engineering blueprint** for native mobile developers.
 
 ### Core Non-Negotiables
-1. **Decoupled Logic First:** All game calculations, night resolutions, voting tallies, win condition verifications, and reconnection reconciliations MUST reside in `src/game/rules.ts`. UI components (`src/components/*`) must remain strictly declarative view layers.
-2. **Deterministic Automated Tests:** Any modification to game rules or edge cases MUST be tested in `src/game/rules.test.ts` using Node's built-in test runner (`node:test` + `node:assert/strict`) via `npx --yes tsx --test src/game/rules.test.ts`.
+1. **Decoupled Logic First:** All game calculations, night resolutions, voting tallies, win condition verifications, live phase transitions, and reconnection reconciliations MUST reside in `src/game/rules.ts` (shared rules) or `src/live/engine.ts` (authoritative live engine). UI components (`src/components/*`) must remain strictly declarative view layers.
+2. **Deterministic Automated Tests:** Any modification to game rules, live phases, or signaling MUST be tested in `src/game/rules.test.ts`, `src/live/engine.test.ts` or `src/live/protocol.test.ts` using Node's built-in test runner (`node:test` + `node:assert/strict`) via `npm test`.
 3. **No External Mocking Compromise:** Do not substitute mock or hardcoded state when real algorithmic solutions are defined.
 4. **Minimalist Scandinavian Noir Aesthetic:** Maintain consistent visual discipline: deep charcoal/pitch black backgrounds (`#07080c`, `#090a0f`), subtle accent badges (crimson for Mafia, cold cyan for Detective, emerald for Doctor, amber for Vigilante, purple for Jester), and sharp typography (Cinzel headers, Inter body, JetBrains Mono metrics).
 
@@ -28,7 +28,15 @@
 │   ├── types/mafia.ts             # Source of truth for TypeScript interfaces and enums
 │   ├── game/
 │   │   ├── rules.ts               # Pure deterministic Mafia engine & state reconciliation
-│   │   └── rules.test.ts          # Automated unit test suite (11+ tests)
+│   │   └── rules.test.ts          # Automated unit test suite (13 tests)
+│   ├── live/
+│   │   ├── engine.ts              # Authoritative host engine for real P2P games
+│   │   ├── engine.test.ts         # Live state-machine tests (18 tests)
+│   │   ├── protocol.ts            # Wire messages, timings, SDP invite/answer tokens
+│   │   ├── protocol.test.ts       # Signaling codec tests (4 tests)
+│   │   ├── session.ts             # Host/guest sessions over the engine + transport
+│   │   ├── transport.ts           # Serverless WebRTC DataChannel handshake
+│   │   └── viewModel.ts           # Per-viewer role/faction projection helpers
 │   ├── services/
 │   │   ├── soundEffects.ts        # Synthesized Web Audio API sound effects and haptic pulses
 │   │   └── persistence.ts         # LocalStorage session caching & offline action queue
@@ -37,6 +45,10 @@
 │   └── components/
 │       ├── DeviceFrame.tsx        # Realistic iPhone 16 Pro & Pixel 9 Pro device shells
 │       ├── GameSimulator.tsx      # Multi-device & single-device virtual local LAN emulator
+│       ├── LiveGame.tsx           # Real P2P lobby, QR handshake & in-game shell
+│       ├── live/
+│       │   ├── NominationView.tsx  # Phone-first nomination screen
+│       │   └── QrTools.tsx        # Local QR + clipboard/share plumbing
 │       ├── RoleCard.tsx           # 3D secret card flip with anti-shoulder-surfing shield
 │       ├── RolePortraits.tsx      # Vector SVG portraits for all roles
 │       ├── NightPhaseView.tsx     # Night action targeting, countdown & detective clues
@@ -56,31 +68,35 @@
 ```
 [lobby]
    │
-   ▼ (Host launches session -> assignRoles() -> ZkRS Key Exchange)
+   ▼ (Host taps "Deal roles & start" -> startGame() -> assignRoles())
 [role_reveal]
    │
-   ▼ (Player taps "I Understand My Role" -> playNightEnter())
+   ▼ (Every player ready, or revealSec timer expires)
 [night]
    │
-   ▼ (Timer expires or actions locked -> resolveNightActions())
+   ▼ (All night actors chose, or nightSec expires -> resolveNightActions())
 [dawn]
    │
-   ▼ (Casualties / Doctor saves announced -> onProceedToDay())
-[day_discussion]
+   ▼ (dawnSec timer expires / host proceeds)
+[day]
    │
-   ▼ (Player nominated with majority or host calls trial -> onCallVote())
-[trial]
+   ▼ (daySec timer expires / host calls the vote)
+[voting]  (nomination: who should stand trial?)
    │
-   ▼ (Suspect delivers 20s defense -> voting open)
-[voting]
+   ├── (no majority / tie) ──► [night] (dayNumber + 1)
    │
-   ▼ (Votes cast -> tallyVotes(mode = 'trial') -> executeTrialVerdict())
-[verdict]
+   ▼ (majority nomination -> enterPhase('trial'))
+[trial]   (guilty vs innocent verdict)
+   │
+   ▼ (all alive voted, or trialSec expires -> tallyVotes(mode = 'trial'))
+[verdict] (executed or pardoned, shown for verdictSec)
    │
    ├── (checkWinCondition() returns isGameOver == true) ──► [game_over]
    │
    └── (checkWinCondition() returns isGameOver == false) ──► [night] (dayNumber + 1)
 ```
+
+The live P2P machine above is implemented in `src/live/engine.ts`. The simulator's scripted flow uses the same phases from `src/game/rules.ts`; its `TrialVotingView` verdict props are reused by the live `verdict` phase.
 
 ---
 
@@ -104,6 +120,18 @@ When editing game mechanics, ensure these scenarios behave according to spec:
 ---
 
 ## 5. Local Network Protocol & Reconnection Contracts
+
+### 5.0 Live P2P Contract (WebRTC, `src/live/*`)
+
+This is the transport actually used by the deployed PWA:
+
+1. **Topology:** the host runs one `GameEngine`; each guest connects to it with a single `RTCDataChannel('mafia-lan')`.
+2. **Signalling:** no server. `createHostPeer` produces an offer token, `createGuestPeer` produces an answer token; both are base64url JSON (`v`, `k`, `sdp`, `room`, `name?`) exchanged as `#join=` / `#answer=` QR codes or copy/paste.
+3. **ICE:** `iceServers: []` (host candidates only). Same Wi-Fi/LAN is required; the session works offline.
+4. **Authority:** the host validates every `ClientMessage` (`night_action`, `vote`, `accuse`, `chat`, `ready`) against the engine phase. Guests never mutate state locally.
+5. **Secrecy:** `PublicState` (phase, players, feed, trial tallies) is broadcast; `PrivateState` (role, faction, teammates, investigation) is sent per recipient. Never widen that projection.
+6. **Clock:** every `PublicState` carries the host's `now`; guests compute `clockOffsetMs` so phase timers agree.
+7. **Verdict:** after trial resolution the engine enters `verdict` (`trialVerdict = 'executed' | 'pardoned'`) for `verdictSec`, then `nextNight()` clears the trial fields.
 
 ### 5.1 Service Discovery
 - Service type: `_mafia-lan._tcp.local.`
@@ -129,18 +157,23 @@ When a client temporarily loses Wi-Fi connection:
 Before completing any task, run the automated test suite and compilation checks:
 
 ```bash
-# 1. Run pure logic unit tests
-npx --yes tsx --test src/game/rules.test.ts
+# 1. Run all deterministic suites (rules + live engine + signaling)
+npm test
 
-# 2. Check full application compilation
+# 2. Type-check without emitting
+npx tsc --noEmit
+
+# 3. Check full application compilation
 npm run build
 ```
 
 ### 6.1 GitHub Actions CI/CD Pipeline
 The repository maintains a multiplatform matrix at `.github/workflows/ci-cd.yml` which executes automatically on `push` and `pull_request` to `main` and `master`:
-- **Web App:** Node 20, runs `rules.test.ts` (11/11 tests), `tsc --noEmit`, compiles `dist/` production web bundle.
-- **Android Standalone APK:** Ubuntu + Temurin JDK 17 + Android SDK, executes `./gradlew assembleDebug` in `/android`, computes SHA-256 checksums, and uploads `mafia-lan-android-debug-apk`.
+- **Web App:** Node 20, runs `npm test` (35 tests), `tsc --noEmit`, compiles `dist/` production web bundle, and verifies the PWA manifest/service worker shell.
+- **Web PWA Deploy:** publishes `dist/` to GitHub Pages on `main`/`master` or manual dispatch.
+- **Android Standalone APK:** Ubuntu + Temurin JDK 17 + Android SDK, executes `./gradlew assembleDebug`, computes SHA-256 checksums, and uploads `mafia-lan-android-debug-apk`.
 - **iOS Native:** macOS 14 (Apple Silicon) + Xcode 16, validates `Info.plist` Bonjour keys, builds iOS Simulator/Ad-Hoc archive via `xcodebuild`, and uploads `mafia-lan-ios-simulator-app`.
+- **GitHub Release:** downloads the APK(s) and iOS zip, writes `SHA256SUMS.txt`, and publishes/updates the rolling `continuous` prerelease (or a versioned release on `v*` tags).
 - **CI/CD Summary:** Aggregates multiplatform build outcomes directly in `$GITHUB_STEP_SUMMARY`.
 
 ### Dev Server & Browser Verification

@@ -5,7 +5,7 @@
 [![Discovery](https://img.shields.io/badge/Protocol-mDNS%20%2F%20Bonjour%20%28_mafia--lan._tcp%29-indigo.svg)](#local-network-architecture)
 [![Security](https://img.shields.io/badge/Security-Zero--Knowledge%20X25519%20%2B%20AES--256--GCM-emerald.svg)](#zero-knowledge-role-secrecy--anti-cheat)
 [![CI/CD Auto-Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Web%20%2B%20APK%20%2B%20iOS)-success.svg)](#45-github-actions-cicd-autobuild-web-android-apk-ios)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-13%2F13%20Passing-brightgreen.svg)](#testing--quality-assurance)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-35%2F35%20Passing-brightgreen.svg)](#testing--quality-assurance)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](#license)
 
 > A production-grade mobile social deduction client and architectural specification for Android, iOS, and Web. Engineered for zero-configuration, encrypted peer-to-peer multiplayer sessions over local Wi-Fi router or peer hotspot networks without requiring cloud relays or internet access.
@@ -15,6 +15,7 @@
 
 ## Table of Contents
 - [1. Overview & Key Capabilities](#1-overview--key-capabilities)
+  - [1.1 Play Live in a Browser (No Native App Needed)](#11-play-live-in-a-browser-no-native-app-needed)
 - [2. Screenshots & Visual Walkthrough](#2-screenshots--visual-walkthrough)
 - [3. How to Play Mafia](#3-how-to-play-mafia)
   - [3.1 Factions & Win Criteria](#31-factions--win-criteria)
@@ -29,6 +30,7 @@
   - [4.4 Instant PWA Standalone Mode](#44-instant-pwa-standalone-mode)
   - [4.5 GitHub Actions CI/CD Autobuild (Web, Android APK, iOS)](#45-github-actions-cicd-autobuild-web-android-apk-ios)
 - [5. Local Network Architecture & Protocol](#5-local-network-architecture--protocol)
+  - [5.0 Live PWA Transport (WebRTC, no server)](#50-live-pwa-transport-webrtc-no-server)
   - [5.1 Discovery: mDNS / Bonjour](#51-discovery-mdns--bonjour)
   - [5.2 Transport: TLS 1.3 WebSockets](#52-transport-tls-13-websockets)
   - [5.3 Wi-Fi Disconnection & State Reconciliation](#53-wi-fi-disconnection--state-reconciliation)
@@ -43,12 +45,28 @@
 ## 1. Overview & Key Capabilities
 
 - **Zero-Configuration LAN Discovery:** Uses standard mDNS / Bonjour (`_mafia-lan._tcp.local.`, port `8443`) to advertise and discover local games in `< 500ms` without typing IP addresses.
+- **Real Browser-to-Browser Play (PWA):** The web build is a complete game, not a demo. One phone hosts, everyone else joins from the browser over a WebRTC DataChannel with a QR/link handshake — no native app, account, server or internet required on the same Wi-Fi.
 - **Cross-Platform Compatibility:** Runs seamlessly across Android (Kotlin + Jetpack Compose), iOS (Swift 6 + SwiftUI), and Web / PWA.
 - **Offline & Disconnection Resilience:** If a device temporarily loses Wi-Fi, actions are buffered in a local queue and reconciled automatically upon reconnection via sequence deltas (`reconcileStateOnReconnect`).
 - **Haptic Vibration Engine & Tactile Feedback:** Configurable tactile vibration feedback with customized waveforms for role reveals (`[40, 60, 40ms]`), nightfall descent (`[80, 50, 100, 150ms]`), detective interrogations, and trial gavel verdicts. Includes a dedicated User Settings panel with intensity calibration (`soft`, `medium`, `heavy`), Web Vibration API (`navigator.vibrate`) integration, and realistic simulated frame rumble for desktop testing.
 - **Zero-Knowledge Role Secrecy (ZkRS):** Protects players against Wi-Fi packet sniffing (Wireshark) and host memory dumping. Ephemeral `X25519` key exchange encrypts roles with the recipient's public key using `AES-256-GCM`.
 - **Minimalist Scandinavian Noir Aesthetic:** Atmospheric high-contrast crime aesthetic with 120Hz ProMotion spring animations, 3D card flips, privacy shields, and a synthesized Web Audio sound engine.
 - **Interactive Simulator:** Dual-mode emulator supporting single-device testing (iPhone 16 Pro / Pixel 9 Pro frames) and multi-device side-by-side local network simulation with live packet inspection.
+
+### 1.1 Play Live in a Browser (No Native App Needed)
+
+The deployed PWA at **https://naqushab.github.io/Mafia-LAN/** is a fully playable client. A guest only needs a browser and the same Wi-Fi network as the host:
+
+1. **Host:** open the PWA, enter a name, tap **Play Live → Host a table**.
+2. **Invite:** tap **Invite player** and show the QR code (or share the link) to the guest.
+3. **Guest:** open the link or scan the QR on their phone. The invite is prefilled; enter a name and tap **Connect**.
+4. **Handshake:** the guest shows a reply QR/link, which the host scans or pastes. The devices are now connected directly.
+5. **Fill the table:** add AI bots if fewer than four humans are available, then tap **Deal roles & start**.
+6. Play the full loop — secret role reveal, night actions, dawn report, discussion/accusations, nomination vote, gallows trial, verdict and game over.
+
+How it works: the host device owns the authoritative `GameEngine`; signalling SDP is exchanged by QR/link (no signalling server) and gameplay runs over a WebRTC DataChannel. ICE uses host candidates only, so it stays on the local network and works with the internet switched off. Roles are filtered per recipient by the host before every broadcast; guests never receive another player's secret role.
+
+> **Compatibility:** use a recent Chrome, Safari, Edge or Firefox build over `https://` or `localhost`. WebRTC and camera scanning require a secure context. If the camera is unavailable, every step has a copy/paste fallback.
 
 ---
 
@@ -187,7 +205,7 @@ The application will launch on `http://localhost:3000`.
 
 #### 3. Run Automated Logic Tests
 ```bash
-npx --yes tsx --test src/game/rules.test.ts
+npm test
 ```
 
 #### 4. Build Production Static Assets
@@ -364,7 +382,7 @@ Mafia LAN includes an automated multiplatform CI/CD pipeline configured at `.git
 [git commit / push]
        │
        ├──► Job 1: Web App (Ubuntu + Node 20)
-       │    ├── Run 11/11 deterministic tests (rules.test.ts)
+       │    ├── Run 35 deterministic rules, live engine & signaling tests
        │    ├── Type-check via tsc --noEmit
        │    └── Compile Vite production bundle -> dist/ artifact
        │
@@ -378,7 +396,12 @@ Mafia LAN includes an automated multiplatform CI/CD pipeline configured at `.git
        │    ├── Compile simulator & ad-hoc binary via xcodebuild
        │    └── Package & upload MafiaLAN-iOS-Simulator.zip artifact
        │
-       └──► Job 4: CI/CD Multiplatform Summary
+       ├──► Job 4: GitHub Release (Ubuntu)
+       │    ├── Download the Android APK(s) + iOS simulator zip
+       │    ├── Generate SHA-256SUMS.txt and release notes
+       │    └── Publish/update the rolling `continuous` release (tags -> versioned release)
+       │
+       └──► Job 5: CI/CD Multiplatform Summary
             └── Formats GitHub Step Summary with download links & test metrics
 ```
 
@@ -395,6 +418,8 @@ Mafia LAN includes an automated multiplatform CI/CD pipeline configured at `.git
    - `mafia-lan-android-debug-apk`: Standalone installable Android `.apk` for phones and emulators.
    - `mafia-lan-ios-simulator-app`: Zipped `.app` bundle for testing in the Xcode iOS Simulator or ad-hoc test devices.
 
+The same APK(s) and iOS zip are attached automatically to the [**Releases**](https://github.com/naqushab/Mafia-LAN/releases) page (`continuous` rolling prerelease for every push to `main`, or a versioned release when a `v*` tag is pushed), together with `SHA256SUMS.txt`. You no longer need a GitHub account to download a build.
+
 #### 3. Optional Secrets for Production App Signing
 To enable self-signed production Android APKs and TestFlight distribution, add these repository secrets in **Settings → Secrets and variables → Actions**:
 - `ANDROID_KEYSTORE_BASE64`: Base64 encoded release `.keystore` / `.jks` file.
@@ -405,6 +430,16 @@ To enable self-signed production Android APKs and TestFlight distribution, add t
 ---
 
 ## 5. Local Network Architecture & Protocol
+
+### 5.0 Live PWA Transport (WebRTC, no server)
+
+The browser client is a real peer-to-peer implementation, independent of the native mDNS/TLS blueprint:
+
+- **Topology:** star — the host device runs one authoritative `GameEngine`, each guest holds a single `RTCDataChannel` to it.
+- **Signalling:** SDP offer/answer tokens are exchanged out-of-band as QR codes, share links (`#join=`, `#answer=`) or copy/paste. There is no signalling server.
+- **ICE:** host candidates only (`iceServers: []`), so connections stay on the local subnet and work with no internet. Same Wi-Fi is required.
+- **Authority & secrecy:** every action is validated by the host engine. `PublicState` is broadcast to everyone; `PrivateState` (role, faction, teammates, detective report) is filtered and sent per recipient.
+- **Match loop:** `lobby → role_reveal → night → dawn → day → voting → trial → verdict → night…`, ending in `game_over`. All transitions are covered by `src/live/engine.test.ts`.
 
 ### 5.1 Discovery: mDNS / Bonjour
 - **Service Name:** `_mafia-lan._tcp.local.`
@@ -440,21 +475,13 @@ The codebase decouples pure game rules from UI rendering, enabling high-speed un
 
 ### Running Unit Tests
 ```bash
-npx --yes tsx --test src/game/rules.test.ts
+npm test
 ```
 
-#### Test Suite Matrix (11/11 Passing)
-- `Role assignments correctly distributes roles and aligns factions`
-- `Night resolution: Mafia eliminates target if not healed`
-- `Night resolution: Doctor saves target attacked by Mafia`
-- `Night resolution: Detective uncovers regular Mafia vs Godfather immunity`
-- `Win Condition: Mafia victory when Mafia equals or exceeds Town`
-- `Win Condition: Town victory when all Mafia eliminated`
-- `Win Condition: Jester victory when Jester is executed by town vote`
-- `Voting Tally: Majority required for nomination`
-- `Edge Case: Doctor shield absorbs simultaneous multi-attacks from Mafia and Vigilante`
-- `Edge Case: Gallows trial tie vote defaults to innocent / pardon`
-- `Edge Case: Wi-Fi Disconnect state reconciliation restores player status and role without loss`
+#### Test Suite Matrix (35/35 Passing)
+- **Rules engine (13):** role assignment and faction alignment, night kills, Doctor protection, Detective/Godfather immunity, multi-attacker Doctor shielding, mafia/town/jester win conditions, nomination majority, gallows tie → pardon, Wi-Fi reconnect reconciliation, 4–16 player scaling, and the classic role randomizer.
+- **Live P2P engine (18):** lobby gates, role reveal → night, shared syndicate hit with Godfather override, private investigations, nomination → trial → verdict → nightfall, pardons, jester victory, hidden-role projection, timer-driven phases, verdict visibility, and restart.
+- **Signaling codecs (4):** offer/answer round-trips, `#join=`/`#answer=` share-link parsing, and rejection of malformed invite codes.
 
 ---
 
@@ -475,6 +502,10 @@ npx --yes tsx --test src/game/rules.test.ts
 │   ├── components/
 │   │   ├── DeviceFrame.tsx      # iPhone 16 Pro & Pixel 9 Pro device frames
 │   │   ├── GameSimulator.tsx    # Interactive single & dual phone LAN simulator
+│   │   ├── LiveGame.tsx         # Real P2P lobby, QR handshake & live game view
+│   │   ├── live/
+│   │   │   ├── NominationView.tsx # Phone-first nomination vote screen
+│   │   │   └── QrTools.tsx      # Local QR render/scan + clipboard/share helpers
 │   │   ├── RoleCard.tsx         # 3D interactive flip card with privacy guard
 │   │   ├── RolePortraits.tsx    # Film-noir vector SVG portraits for all roles
 │   │   ├── NightPhaseView.tsx   # Night action selection and timer
@@ -488,6 +519,14 @@ npx --yes tsx --test src/game/rules.test.ts
 │   ├── game/
 │   │   ├── rules.ts             # Decoupled pure Mafia game rules & reconciliation
 │   │   └── rules.test.ts        # Automated unit tests (node:test)
+│   ├── live/
+│   │   ├── engine.ts            # Authoritative host engine for live P2P games
+│   │   ├── engine.test.ts       # Live state-machine tests (node:test)
+│   │   ├── protocol.ts          # Wire messages, timings & SDP signal tokens
+│   │   ├── protocol.test.ts     # Invite/answer codec tests
+│   │   ├── session.ts           # Host/guest session layer over the engine
+│   │   ├── transport.ts         # Serverless WebRTC DataChannel handshake
+│   │   └── viewModel.ts         # Per-viewer public/private projection helpers
 │   ├── services/
 │   │   ├── soundEffects.ts      # Web Audio synthesized sound engine
 │   │   └── persistence.ts       # LocalStorage session state persistence
@@ -501,9 +540,9 @@ npx --yes tsx --test src/game/rules.test.ts
 
 ## 8. Contributing & Code of Conduct
 
-1. Ensure all game logic modifications reside in `src/game/rules.ts` rather than UI components.
-2. Accompany any new rule mechanics or edge cases with corresponding unit tests in `src/game/rules.test.ts`.
-3. Verify clean compilation with `npm run build` and test execution before submitting pull requests.
+1. Ensure all game logic modifications reside in `src/game/rules.ts` (shared rules) or `src/live/engine.ts` (live state machine) rather than UI components.
+2. Accompany any new rule mechanics or edge cases with corresponding unit tests in `src/game/rules.test.ts`, `src/live/engine.test.ts` or `src/live/protocol.test.ts`.
+3. Verify clean compilation with `npm run build` and run `npm test` before submitting pull requests.
 
 ---
 

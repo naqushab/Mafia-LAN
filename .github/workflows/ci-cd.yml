@@ -38,10 +38,10 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci || npm install
 
-      - name: 🧪 Run Automated Game Engine Unit Tests (rules.test.ts)
+      - name: 🧪 Run Automated Game Engine Unit Tests
         run: |
-          echo "Executing Mafia deterministic state machine tests..."
-          npx --yes tsx --test src/game/rules.test.ts
+          echo "Executing Mafia deterministic state machine, live engine and signaling tests..."
+          npm test
 
       - name: 🔍 TypeScript Static Type Checking
         run: npx tsc --noEmit
@@ -320,7 +320,13 @@ jobs:
       - name: 🔐 Write checksums
         run: |
           cd release-assets
-          sha256sum ./*.apk ./*.zip > SHA256SUMS.txt
+          shopt -s nullglob
+          files=(./*.apk ./*.zip)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No installables were produced by this run." > SHA256SUMS.txt
+          else
+            sha256sum "${files[@]}" > SHA256SUMS.txt
+          fi
           cat SHA256SUMS.txt
 
       - name: 📝 Compose release notes
@@ -336,9 +342,16 @@ jobs:
             echo "| PWA | https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/ |"
             echo
             echo "### Downloads"
-            echo "- \`mafia-lan-debug.apk\` — sideload on Android (debug-signed)"
-            echo "- \`mafia-lan-release.apk\` — release build (currently signed with the debug keystore)"
-            echo "- \`mafia-lan-ios-simulator.zip\` — iOS Simulator bundle (not installable on a physical iPhone)"
+            if [ -f release-assets/mafia-lan-debug.apk ]; then
+              echo "- \`mafia-lan-debug.apk\` — sideload on Android (debug-signed)"
+            fi
+            if [ -f release-assets/mafia-lan-release.apk ]; then
+              echo "- \`mafia-lan-release.apk\` — release build (currently signed with the debug keystore)"
+            fi
+            if [ -f release-assets/mafia-lan-ios-simulator.zip ]; then
+              echo "- \`mafia-lan-ios-simulator.zip\` — iOS Simulator bundle (not installable on a physical iPhone)"
+            fi
+            echo "- **Play now (PWA):** no install needed — open the link above on any phone on the same Wi-Fi."
             echo
             echo "### Checksums"
             echo '```'
@@ -383,7 +396,7 @@ jobs:
   # =========================================================================
   build-summary:
     name: 📊 CI/CD Multiplatform Summary
-    needs: [build-web, deploy-web, build-android, build-ios]
+    needs: [build-web, deploy-web, build-android, build-ios, release]
     runs-on: ubuntu-latest
     if: always()
 
@@ -399,12 +412,13 @@ jobs:
           | 🚀 **Web PWA (Pages)** | ${{ needs.deploy-web.result == 'success' && '✅ Live' || '⏭️ Skipped / ❌ Failed' }} | https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/ |
           | 🤖 **Android APK** | ${{ needs.build-android.result == 'success' && '✅ Succeeded' || '❌ Failed' }} | `mafia-lan-android-debug-apk` (`.apk`) |
           | 🍎 **iOS App** | ${{ needs.build-ios.result == 'success' && '✅ Succeeded' || '❌ Failed' }} | `mafia-lan-ios-simulator-app` (`.zip`) |
+          | 📦 **GitHub Release** | ${{ needs.release.result == 'success' && '✅ Published' || '⏭️ Skipped / ❌ Failed' }} | [Releases / Continuous](https://github.com/${{ github.repository }}/releases) |
 
           ### 🚀 Deployment Details
           - **Commit SHA:** `${{ github.sha }}`
           - **Triggered By:** `${{ github.event_name }}` on `${{ github.ref_name }}`
-          - **Automated Tests:** 13/13 deterministic rules engine tests validated.
-          - **LAN Architecture:** Zero-configuration mDNS `_mafia-lan._tcp`, TLS 1.3 WebSockets, X25519 Role Encryption.
+          - **Automated Tests:** `npm test` — deterministic rules engine, live P2P engine and signaling codecs.
+          - **LAN Architecture:** Zero-configuration mDNS `_mafia-lan._tcp`, TLS 1.3 WebSockets, P2P WebRTC DataChannel.
 
-          Download the generated APKs and archives directly from the **Artifacts** tab on this workflow run.
+          Download the generated APKs and archives directly from the **Releases** page or the **Artifacts** tab on this workflow run.
           EOF
