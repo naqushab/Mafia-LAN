@@ -1,5 +1,6 @@
 # Mafia LAN - Play Mafia with friends over Wifi/LAN
 
+[![Live PWA](https://img.shields.io/badge/Live%20PWA-naqushab.github.io%2FMafia--LAN-6d28d9.svg)](https://naqushab.github.io/Mafia-LAN/)
 [![Platform](https://img.shields.io/badge/Platforms-Android%20%7C%20iOS%20%7C%20Web-rose.svg)](#build--installation-instructions)
 [![Discovery](https://img.shields.io/badge/Protocol-mDNS%20%2F%20Bonjour%20%28_mafia--lan._tcp%29-indigo.svg)](#local-network-architecture)
 [![Security](https://img.shields.io/badge/Security-Zero--Knowledge%20X25519%20%2B%20AES--256--GCM-emerald.svg)](#zero-knowledge-role-secrecy--anti-cheat)
@@ -342,10 +343,16 @@ xcodebuild -exportArchive \
 
 ### 4.4 Instant PWA Standalone Mode
 
+**Live deployment:** **https://naqushab.github.io/Mafia-LAN/**
+
+Every push to `main`/`master` builds the web client and publishes it to GitHub Pages via the `deploy-web` job in `.github/workflows/ci-cd.yml` (GitHub Actions artifact → `actions/deploy-pages`). No manual deploy step, no separate host.
+
 For instant local play on any Android or iOS phone without installing Android Studio or Xcode:
-1. Open the hosted development URL on your phone's browser (**Google Chrome** on Android or **Safari** on iOS).
+1. Open **https://naqushab.github.io/Mafia-LAN/** on your phone's browser (**Google Chrome** on Android or **Safari** on iOS).
 2. Tap the browser share/menu icon and select **"Add to Home Screen"** or **"Install App"**.
 3. The app installs as a standalone, borderless application supporting 120Hz smooth display and offline local storage caching.
+
+PWA assets live in `public/`: `manifest.webmanifest` (name, icons, standalone display), `sw.js` (offline shell + runtime cache, network-first for navigations so a new deploy lands immediately), and the generated icon set from `scripts/generate-icons.py` (`public/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Asset URLs are rewritten to the `/Mafia-LAN/` base at build time via `VITE_BASE_PATH`, which the workflow sets from the repository name — so a fork deploys correctly under its own sub-path with no edits.
 
 ---
 
