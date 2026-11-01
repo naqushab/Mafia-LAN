@@ -547,13 +547,13 @@ ${sampleSwiftApp}
                     <Globe className="w-3.5 h-3.5" /> build-web
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/30">
-                    {simulatedRunStatus === 'running' ? 'Building...' : 'Passing (13 tests)'}
+                    {simulatedRunStatus === 'running' ? 'Building...' : 'Passing (36 tests)'}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-400 space-y-1 font-mono">
                   <div>• Runner: <span className="text-slate-300">ubuntu-latest</span></div>
                   <div>• Engine: <span className="text-slate-300">Node 20 + npm ci</span></div>
-                  <div>• Tests: <span className="text-emerald-400">rules.test.ts (13/13)</span></div>
+                  <div>• Tests: <span className="text-emerald-400">rules + live + signaling (36/36)</span></div>
                   <div>• Target: <span className="text-slate-300">TypeScript + Vite dist/</span></div>
                 </div>
                 <div className="pt-2 border-t border-slate-800/80 text-[10px] font-mono text-slate-400 flex items-center justify-between">
