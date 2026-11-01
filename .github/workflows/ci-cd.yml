@@ -274,6 +274,111 @@ jobs:
           if-no-files-found: ignore
 
   # =========================================================================
+  # 3b. RELEASE: Attach the APKs + iOS build to GitHub Releases automatically
+  #     - push to main/master  -> updates the rolling "continuous" prerelease
+  #     - push a tag v*        -> publishes a normal versioned release
+  # =========================================================================
+  release:
+    name: 📦 Publish GitHub Release
+    needs: [build-android, build-ios]
+    if: |
+      always() &&
+      (needs.build-android.result == 'success' || needs.build-ios.result == 'success') &&
+      (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: ⬇️ Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: false
+
+      - name: 🗂️ Collect installables with stable names
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          shopt -s globstar nullglob
+
+          debug_apk=$(ls artifacts/mafia-lan-android-debug-apk/**/*.apk 2>/dev/null | head -1 || true)
+          release_apk=$(ls artifacts/mafia-lan-android-release-apk/**/*.apk 2>/dev/null | head -1 || true)
+          ios_zip=$(ls artifacts/mafia-lan-ios-simulator-app/**/*.zip 2>/dev/null | head -1 || true)
+
+          [ -n "$debug_apk" ]   && cp "$debug_apk"   release-assets/mafia-lan-debug.apk
+          [ -n "$release_apk" ] && cp "$release_apk" release-assets/mafia-lan-release.apk
+          [ -n "$ios_zip" ]     && cp "$ios_zip"     release-assets/mafia-lan-ios-simulator.zip
+
+          ls -lh release-assets
+
+      - name: 🔐 Write checksums
+        run: |
+          cd release-assets
+          sha256sum ./*.apk ./*.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: 📝 Compose release notes
+        run: |
+          {
+            echo "## Mafia LAN — automated build"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
+            echo "| PWA | https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/ |"
+            echo
+            echo "### Downloads"
+            echo "- \`mafia-lan-debug.apk\` — sideload on Android (debug-signed)"
+            echo "- \`mafia-lan-release.apk\` — release build (currently signed with the debug keystore)"
+            echo "- \`mafia-lan-ios-simulator.zip\` — iOS Simulator bundle (not installable on a physical iPhone)"
+            echo
+            echo "### Checksums"
+            echo '```'
+            cat release-assets/SHA256SUMS.txt
+            echo '```'
+          } > release-notes.md
+
+      - name: 🚀 Publish rolling release (main branch)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: continuous
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Latest build (auto from ${{ github.ref_name }})" --notes-file release-notes.md
+          else
+            gh release create "$TAG" \
+              --title "Latest build (auto from ${{ github.ref_name }})" \
+              --notes-file release-notes.md \
+              --prerelease \
+              --target "${{ github.sha }}"
+          fi
+          gh release upload "$TAG" release-assets/* --clobber
+
+      - name: 🏷️ Publish versioned release (tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file release-notes.md
+          else
+            gh release create "$TAG" --title "Mafia LAN $TAG" --notes-file release-notes.md --verify-tag
+          fi
+          gh release upload "$TAG" release-assets/* --clobber
+
+  # =========================================================================
   # 4. CI/CD SUMMARY & BUILD BADGE REPORT
   # =========================================================================
   build-summary:
