@@ -129,6 +129,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: 🟢 Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: 📦 Install web dependencies
+        run: npm ci || npm install
+
+      - name: 🧱 Bundle the web game into the APK
+        run: |
+          echo "Building the full PWA with relative asset paths for the in-app WebView..."
+          npm run build:android
+          test -f android/app/src/main/assets/www/index.html
+          test -f android/app/src/main/assets/www/sw.js
+          grep -q "./assets/" android/app/src/main/assets/www/index.html
+          du -sh android/app/src/main/assets/www
+
       - name: 🛠️ Accept Android SDK Licenses
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
@@ -146,7 +165,7 @@ jobs:
 
       - name: 🔨 Compile Android Debug APK
         run: |
-          echo "Building debug APK with embedded Ktor WebSocket & mDNS lock..."
+          echo "Building debug APK with the bundled web game, WebRTC bridge & mDNS lock..."
           if [ -d "android" ]; then
             cd android
           fi

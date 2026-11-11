@@ -114,6 +114,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: 🟢 Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 🧱 Bundle the web game into the APK
+        run: |
+          npm ci || npm install
+          npm run build:android
+
       - name: 🛠️ Setup Android SDK
         uses: android-actions/setup-android@v3
 
@@ -136,7 +147,7 @@ jobs:
       - name: 🔨 Compile Android Debug APK
         working-directory: android
         run: |
-          echo "Building debug APK with embedded Ktor WebSocket & mDNS lock..."
+          echo "Building debug APK with the bundled web game & mDNS lock..."
           ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: 🔏 Generate Release APK & Self-Sign (Fallback / Release Pipeline)
@@ -653,23 +664,25 @@ ${sampleSwiftApp}
                 Android Standalone Native APK Compilation
               </h3>
               <span className="text-[11px] text-emerald-400 font-mono">
-                App Name: Mafia LAN: Local WiFi Party Game • Kotlin 2.0 • Jetpack Compose
+                App Name: Mafia LAN: Local WiFi Party Game • Kotlin 2.0 • WebView shell + bundled PWA
               </span>
             </div>
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            The Android native codebase includes an embedded Ktor WebSocket server on port 8443 and an active <code className="text-emerald-400">MulticastLock</code> so local devices can host games directly without any external router or internet access.
+            The APK is a real, offline game: it embeds the production web build under <code className="text-emerald-400">assets/www</code> and serves it from the secure virtual origin <code className="text-emerald-400">https://appassets.androidplatform.net</code> via <code className="text-emerald-400">WebViewAssetLoader</code>, so WebRTC, the QR camera, clipboard and service worker all work inside the app. A <code className="text-emerald-400">MulticastLock</code> keeps mDNS packets flowing while you host.
           </p>
 
           <div className="space-y-2 text-xs font-mono bg-slate-950 p-4 rounded-xl border border-slate-800">
-            <div className="text-slate-400 text-[11px]"># 1. Clone repository and navigate to android directory:</div>
+            <div className="text-slate-400 text-[11px]"># 1. From the repo root, bundle the web game into the APK assets:</div>
+            <div className="text-emerald-400 select-all">$ npm run build:android</div>
+            <div className="text-slate-400 text-[11px] mt-2"># 2. Navigate to the android project:</div>
             <div className="text-emerald-400 select-all">$ cd android</div>
-            <div className="text-slate-400 text-[11px] mt-2"># 2. Build Debug APK (installs on any Android 8.0+ phone):</div>
+            <div className="text-slate-400 text-[11px] mt-2"># 3. Build Debug APK (installs on any Android 8.0+ phone):</div>
             <div className="text-emerald-400 select-all">$ ./gradlew assembleDebug</div>
-            <div className="text-slate-400 text-[11px] mt-2"># 3. Generated binary location:</div>
+            <div className="text-slate-400 text-[11px] mt-2"># 4. Generated binary location:</div>
             <div className="text-slate-300 text-[11px]">app/build/outputs/apk/debug/app-debug.apk</div>
-            <div className="text-slate-400 text-[11px] mt-2"># 4. Install directly to connected phone via ADB:</div>
+            <div className="text-slate-400 text-[11px] mt-2"># 5. Install directly to connected phone via ADB:</div>
             <div className="text-indigo-400 select-all">$ adb install -r app/build/outputs/apk/debug/app-debug.apk</div>
           </div>
         </div>

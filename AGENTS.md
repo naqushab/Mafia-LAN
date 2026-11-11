@@ -192,7 +192,7 @@ The repository maintains a multiplatform matrix at `.github/workflows/ci-cd.yml`
 ## 7. Native Mobile Implementation References
 
 When guiding native mobile developers:
-- **Android:** Direct developers to `src/components/ApkBuildCenter.tsx` and the `android/` directory for `build.gradle.kts`, `AndroidManifest.xml` (with `CHANGE_WIFI_MULTICAST_STATE`), and Kotlin `MulticastLock` snippets.
+- **Android:** Direct developers to `src/components/ApkBuildCenter.tsx` and the `android/` directory. The APK is a Kotlin WebView shell around the bundled PWA: `MainActivity.kt` serves `assets/www` via `androidx.webkit.WebViewAssetLoader` on `https://appassets.androidplatform.net` (secure origin, so WebRTC/camera/clipboard/service worker work), requests the `CAMERA` permission from `WebChromeClient.onPermissionRequest`, and holds the `CHANGE_WIFI_MULTICAST_STATE` `MulticastLock`. `npm run build:android` regenerates the embedded bundle with relative asset paths.
 - **iOS:** Direct developers to `MAFIA_SPECIFICATION.md` Section 4.1 and the `ios/` directory for `Info.plist` Bonjour keys (`NSLocalNetworkUsageDescription`, `_mafia-lan._tcp`) and Swift `Network.framework` `NWBrowser`/`NWListener` templates.
 - **CI/CD:** Refer to `.github/workflows/ci-cd.yml` for automated matrix builds and artifact generation.
 

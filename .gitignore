@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Generated PWA bundle embedded into the Android APK
+android/app/src/main/assets/www/

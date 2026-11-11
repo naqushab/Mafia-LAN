@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
+    "build:android": "vite build --base=./ --outDir=android/app/src/main/assets/www",
     "preview": "vite preview",
     "test": "tsx --test src/game/rules.test.ts src/live/engine.test.ts src/live/protocol.test.ts",
     "clean": "rm -rf dist server.js",

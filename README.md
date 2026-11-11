@@ -216,73 +216,68 @@ Production assets are generated in the `dist/` directory, ready to serve via Ngi
 
 ---
 
-### 4.2 Android Native (Kotlin, Jetpack Compose, Gradle APK)
+### 4.2 Android Native (Kotlin WebView Shell + Bundled PWA)
+
+The Android app is a real, offline game — not a placeholder. It bundles the compiled PWA inside the APK and serves it from a secure virtual origin (`https://appassets.androidplatform.net`) through `WebViewAssetLoader`, so WebRTC, the camera QR scanner, the clipboard and the service worker all behave exactly as they do in a browser. `MainActivity` also holds the Wi-Fi `MulticastLock` required for mDNS reception.
 
 - **Application Label / Name:** `Mafia LAN: Local WiFi Party Game`
-- **Application ID:** `com.mafialan.game`
+- **Application ID:** `com.mafialan.game` (debug builds use `.debug`)
 
 #### Prerequisites
 - **Android Studio** (Ladybug 2024.2+ or Koala)
 - **Android SDK:** Compile SDK 35, Min SDK 26 (Android 8.0 Oreo+)
 - **JDK:** OpenJDK 17 or 21
+- **Node.js 20+** (to compile the web game that gets embedded)
 - Physical Android phone or emulator connected to local Wi-Fi
 
 #### 1. AndroidManifest Permissions (`app/src/main/AndroidManifest.xml`)
-Ensure the following permissions are present to allow mDNS discovery and prevent Wi-Fi sleep:
+Ensure the following permissions are present to allow mDNS discovery, the QR camera and haptics:
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+<uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.VIBRATE" />
 ```
 
-#### 2. Wi-Fi MulticastLock in Kotlin (`MainActivity.kt`)
+#### 2. Bundle the web game before Gradle
+The APK embeds the production web build under `app/src/main/assets/www`. Regenerate it whenever the UI changes:
+```bash
+# From the repository root — relative asset paths, so the WebView can load it
+npm run build:android
+```
+The CI pipeline runs this automatically before `./gradlew assembleDebug`.
+
+#### 3. Wi-Fi MulticastLock in Kotlin (`MainActivity.kt`)
 On Android, devices automatically filter multicast mDNS packets to save battery unless a `MulticastLock` is held:
 ```kotlin
-package com.mafialan.game
-
-import android.net.wifi.WifiManager
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-
-class MainActivity : ComponentActivity() {
-    private var multicastLock: WifiManager.MulticastLock? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-        multicastLock = wifiManager.createMulticastLock("MafiaLanMulticastLock").apply {
-            setReferenceCounted(true)
-            acquire()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        multicastLock?.release()
-    }
+val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+multicastLock = wifiManager.createMulticastLock("MafiaLanMulticastLock").apply {
+    setReferenceCounted(true)
+    acquire()
 }
 ```
+`MainActivity` also forwards `WebChromeClient.onPermissionRequest` to the Android camera permission prompt so the guest/host QR scanner works inside the WebView.
 
-#### 3. Compile Standalone APK via Gradle CLI
+#### 4. Compile Standalone APK via Gradle CLI
 ```bash
-# Navigate to the Android project directory
-cd android
+# From the repository root: embed the latest web game first
+npm run build:android
 
-# Build Debug APK
+cd android
 ./gradlew assembleDebug
 
 # Output APK path:
 # app/build/outputs/apk/debug/app-debug.apk
 ```
 
-#### 4. Install APK directly onto Connected Android Device
+#### 5. Install APK directly onto Connected Android Device
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-#### 5. Build Signed Release APK or Android App Bundle (AAB)
+#### 6. Build Signed Release APK or Android App Bundle (AAB)
 ```bash
 ./gradlew assembleRelease
 # or for Google Play:

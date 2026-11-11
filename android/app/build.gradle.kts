@@ -12,8 +12,8 @@ android {
         applicationId = "com.mafialan.game"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.5.0-lan"
+        versionCode = 4
+        versionName = "3.0.0-webview"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -87,4 +87,7 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.websockets)
     implementation(libs.okhttp)
+
+    // Offline web app container: serves the bundled PWA on a secure virtual origin.
+    implementation(libs.androidx.webkit)
 }
