@@ -18,6 +18,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // CI points this at a cached keystore so every build shares one signing key.
+    // Otherwise each ephemeral runner invents a new key and Android refuses to
+    // install the next APK over the previous one ("App not installed").
+    val ciDebugKeystore = System.getenv("ANDROID_DEBUG_KEYSTORE")
+    signingConfigs {
+        if (!ciDebugKeystore.isNullOrBlank()) {
+            getByName("debug") {
+                storeFile = file(ciDebugKeystore)
+                storePassword = System.getenv("ANDROID_DEBUG_KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("ANDROID_DEBUG_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("ANDROID_DEBUG_KEY_PASSWORD") ?: "android"
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
