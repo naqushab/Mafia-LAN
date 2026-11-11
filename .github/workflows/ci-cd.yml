@@ -148,6 +148,15 @@ jobs:
           grep -q "./assets/" android/app/src/main/assets/www/index.html
           du -sh android/app/src/main/assets/www
 
+      - name: 🔐 Reuse a stable debug signing key
+        # CI runners are ephemeral: without this, Gradle generates a brand new
+        # ~/.android/debug.keystore on every run, and Android refuses to install
+        # a build whose certificate differs from the one already on the phone.
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
       - name: 🛠️ Accept Android SDK Licenses
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
@@ -373,6 +382,10 @@ jobs:
               echo "- \`mafia-lan-ios-simulator.zip\` — iOS Simulator bundle (not installable on a physical iPhone)"
             fi
             echo "- **Play now (PWA):** no install needed — open the link above on any phone on the same Wi-Fi."
+            echo
+            echo "> **Updating from an older APK?** Android rejects an update signed with a"
+            echo "> different key (\`App not installed\`). Uninstall the previous build once,"
+            echo "> then install this one — later builds keep the same key."
             echo
             echo "### Checksums"
             echo '```'

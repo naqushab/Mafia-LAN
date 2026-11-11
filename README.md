@@ -277,6 +277,10 @@ cd android
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+The same build is published to the rolling [`continuous` release](https://github.com/naqushab/Mafia-LAN/releases/tag/continuous) as `mafia-lan-debug.apk`.
+
+> **Installing over an older build:** Android refuses updates signed with a different key (`App not installed`). Builds before `d4dbb05` were signed with a throwaway keystore, so uninstall the previous app before installing the current APK. The CI now caches one stable debug key, so every later build updates in place.
+
 #### 6. Build Signed Release APK or Android App Bundle (AAB)
 ```bash
 ./gradlew assembleRelease
